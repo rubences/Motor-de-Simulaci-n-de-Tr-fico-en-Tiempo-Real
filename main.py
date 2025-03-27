@@ -1,4 +1,5 @@
 # simulacion_trafico/main.py
+
 import asyncio
 import threading
 
@@ -13,13 +14,16 @@ def start_simulation(simulator, interval):
     asyncio.run(simulation_loop(simulator, interval))
 
 def main():
-    # Crear el entorno de simulación
+    # Crear el entorno de la simulación
     city = City(name="Ciudad Ejemplo")
 
+    # Crear semáforos y asignarles ids que coincidan con las posiciones en la GUI
     traffic_light_1 = TrafficLight(id_="T1", green_time=4, yellow_time=1, red_time=3)
     traffic_light_2 = TrafficLight(id_="T2", green_time=5, yellow_time=1, red_time=4)
-    vehicle_1 = Vehicle(id_="V1", position=(0, 0), speed=1.0, direction="NORTE")
-    vehicle_2 = Vehicle(id_="V2", position=(10, 10), speed=1.5, direction="OESTE")
+
+    # Crear vehículos con posiciones iniciales (en coordenadas de la GUI)
+    vehicle_1 = Vehicle(id_="V1", position=(50, 300), speed=2.0, direction="NORTE")
+    vehicle_2 = Vehicle(id_="V2", position=(150, 300), speed=3.0, direction="OESTE")
 
     city.add_traffic_light(traffic_light_1)
     city.add_traffic_light(traffic_light_2)
@@ -28,13 +32,14 @@ def main():
 
     simulator = Simulator(city=city)
 
-    # Iniciar la simulación en un hilo aparte
-    sim_thread = threading.Thread(target=start_simulation, args=(simulator, 0.5), daemon=True)
+    # Iniciar la simulación en un hilo aparte (se ejecuta de forma asíncrona)
+    sim_thread = threading.Thread(target=start_simulation, args=(simulator, 0.1), daemon=True)
     sim_thread.start()
 
-    # Ejecutar la GUI en el hilo principal
+    # Lanzar la GUI en el hilo principal
     launch_gui(simulator)
 
 if __name__ == "__main__":
     main()
+
 
