@@ -1,10 +1,10 @@
 # simulacion_trafico/distribution/rabbit_client.py
 
-# EJEMPLO con 'aio_pika' (instalar con: pip install aio-pika)
-# NOTA: Este código no se usa en la plantilla final, pero sirve de referencia.
-
 import asyncio
 import aio_pika
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 async def send_message(message, queue_name="simulacion_queue"):
     connection = await aio_pika.connect_robust("amqp://guest:guest@localhost/")
@@ -14,15 +14,18 @@ async def send_message(message, queue_name="simulacion_queue"):
             aio_pika.Message(body=message.encode()),
             routing_key=queue_name
         )
+    logging.info("Mensaje enviado: %s", message)
 
 async def receive_messages(queue_name="simulacion_queue"):
     connection = await aio_pika.connect_robust("amqp://guest:guest@localhost/")
     async with connection:
         channel = await connection.channel()
         queue = await channel.declare_queue(queue_name, durable=True)
-
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
                 async with message.process():
-                    print("Mensaje recibido:", message.body.decode())
-                    # Aquí podrías disparar un evento, actualizar otra parte de la simulación, etc.
+                    logging.info("Mensaje recibido: %s", message.body.decode())
+
+def start_rabbitmq_messaging():
+    # Ejecuta el receptor de mensajes en un bucle asyncio
+    asyncio.run(receive_messages())
