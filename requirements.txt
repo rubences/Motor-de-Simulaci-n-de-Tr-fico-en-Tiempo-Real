@@ -2,3 +2,7 @@ aio-pika
 pika
 pygame
 rabbitmq-admin
+tk
+asyncio
+threaded
+
