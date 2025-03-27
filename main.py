@@ -2,9 +2,9 @@
 
 import asyncio
 
-from environment.city import City
-from environment.vehicle import Vehicle
-from environment.traffic_light import TrafficLight
+from environment.City import City
+from environment.Vehicle import Vehicle
+from environment.TrafficLight import TrafficLight
 from simulation.simulator import Simulator
 from concurrency.tasks import run_simulation_tasks
 from ui.gui import launch_gui
