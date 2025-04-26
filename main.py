@@ -1,47 +1,52 @@
-# simulacion_trafico/main.py
-
 import asyncio
-
 from environment.City import City
-from environment.Vehicle import Vehicle
 from environment.TrafficLight import TrafficLight
+from environment.Vehicle import Vehicle
+from environment.road import Road, Intersection
 from simulation.simulator import Simulator
 from concurrency.tasks import run_simulation_tasks
 from ui.gui import launch_gui
 
-
 async def main():
-    # 1. Crear el entorno (ciudad, vehículos, semáforos, etc.)
-    city = City(name="Ciudad Ejemplo")
+    # 1. Crear la ciudad
+    city = City("Ciudad Ejemplo")
 
-    # Creamos algunos semáforos de ejemplo
-    traffic_light_1 = TrafficLight(id_="T1", green_time=4, yellow_time=1, red_time=3)
-    traffic_light_2 = TrafficLight(id_="T2", green_time=5, yellow_time=1, red_time=4)
+    # 2. Definir carreteras
+    city.add_road(Road((100, 300), (700, 300)))  # horizontal
+    city.add_road(Road((300, 100), (300, 500)))  # vertical izq.
+    city.add_road(Road((500, 100), (500, 500)))  # vertical dcha.
 
-    # Creamos algunos vehículos de ejemplo
-    vehicle_1 = Vehicle(id_="V1", position=(0, 0), speed=1.0, direction="NORTE")
-    vehicle_2 = Vehicle(id_="V2", position=(10, 10), speed=1.5, direction="OESTE")
+    # 3. Crear semáforos e intersecciones
+    tl1 = TrafficLight("TL1")
+    inter1 = Intersection((300, 300), tl1)
+    city.add_intersection(inter1)
+    city.add_traffic_light(tl1)
 
-    # Agregamos estos objetos a la ciudad
-    city.add_traffic_light(traffic_light_1)
-    city.add_traffic_light(traffic_light_2)
-    city.add_vehicle(vehicle_1)
-    city.add_vehicle(vehicle_2)
+    tl2 = TrafficLight("TL2")
+    inter2 = Intersection((500, 300), tl2)
+    city.add_intersection(inter2)
+    city.add_traffic_light(tl2)
 
-    # 2. Crear el simulador
-    simulator = Simulator(city=city)
+    # 4. Añadir vehículos de prueba
+    city.add_vehicle(Vehicle("V1", (100, 300), speed=2, direction="ESTE"))
+    city.add_vehicle(Vehicle("V2", (700, 300), speed=2, direction="OESTE"))
 
-    # 3. Iniciar las tareas concurrentes (movimiento de vehículos, cambios de semáforo, etc.)
-    #    Usamos una función que nos devuelve la lista de tareas asyncio
-    tasks = run_simulation_tasks(simulator, update_interval=0.5)
+    # 5. Crear simulador
+    simulator = Simulator(city)
 
-    # 4. Lanzar la interfaz de usuario (opcional) en paralelo
-    #    En este ejemplo, la interfaz se ejecuta en modo asíncrono.
+    # 6. Lanzar tareas de simulación (sin mensajería)
+    tasks = run_simulation_tasks(
+        simulator,
+        vehicle_interval=0.1,
+        light_interval=1.0,
+        metrics_interval=5.0
+    )
+
+    # 7. Iniciar GUI de Pygame en hilo aparte
     gui_task = asyncio.create_task(launch_gui(simulator))
 
-    # 5. Ejecutar todas las tareas en conjunto
+    # 8. Ejecutar todo en paralelo
     await asyncio.gather(*tasks, gui_task)
-
 
 if __name__ == "__main__":
     asyncio.run(main())

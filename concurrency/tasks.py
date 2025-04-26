@@ -1,21 +1,44 @@
-# simulacion_trafico/concurrency/tasks.py
-
 import asyncio
+from performance.metrics import log_simulation_state
 
-async def simulation_loop(simulator, interval):
+async def vehicles_loop(simulator, interval: float = 0.1):
     """
-    Bucle que actualiza periódicamente la simulación.
+    Cada tick mueve los vehículos respetando semáforos.
     """
     while True:
-        simulator.update()
+        simulator.update_vehicles()
         await asyncio.sleep(interval)
 
-def run_simulation_tasks(simulator, update_interval=1.0):
+async def traffic_lights_loop(simulator, interval: float = 1.0):
     """
-    Crea y devuelve una lista de tareas asíncronas necesarias para la simulación:
-    - Bucle de actualización de la ciudad
-    - En un caso complejo, aquí se podrían añadir más tareas.
+    Cada tick actualiza el estado de los semáforos.
     """
-    tasks = []
-    tasks.append(asyncio.create_task(simulation_loop(simulator, update_interval)))
-    return tasks
+    while True:
+        simulator.update_lights()
+        await asyncio.sleep(interval)
+
+async def metrics_loop(simulator, interval: float = 5.0):
+    """
+    Cada interval segundos, registra estado y métricas de rendimiento.
+    """
+    while True:
+        log_simulation_state(simulator)
+        await asyncio.sleep(interval)
+
+def run_simulation_tasks(
+    simulator,
+    vehicle_interval: float = 0.1,
+    light_interval: float   = 1.0,
+    metrics_interval: float = 5.0
+):
+    """
+    Crea y devuelve las tareas asyncio:
+      - vehicles_loop
+      - traffic_lights_loop
+      - metrics_loop
+    """
+    return [
+        asyncio.create_task(vehicles_loop(simulator, vehicle_interval)),
+        asyncio.create_task(traffic_lights_loop(simulator, light_interval)),
+        asyncio.create_task(metrics_loop(simulator, metrics_interval)),
+    ]
