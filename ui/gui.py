@@ -60,7 +60,7 @@ def run_pygame(simulator):
     spawn_slider = Slider(50, 520, 700, 0.1, 2.0, simulator.spawn_interval, "Spawn Interval (s)")
     speed_slider = Slider(50, 560, 700, 1.0, 5.0, simulator.default_speed,   "Vehicle Speed")
 
-    despawn_pts = simulator.spawn_points
+    despawn_pts = simulator.spawn_points    # [(50,300),(750,300)]
 
     running = True
     while running:
@@ -70,7 +70,7 @@ def run_pygame(simulator):
             spawn_slider.handle_event(e)
             speed_slider.handle_event(e)
 
-        # Aplicar cambios
+        # Aplicar sliders
         simulator.spawn_interval = spawn_slider.value
         simulator.default_speed   = speed_slider.value
 
@@ -81,7 +81,7 @@ def run_pygame(simulator):
         draw_intersections(screen, state["intersections"])
         draw_vehicles(screen, state["vehicles"])
 
-        # Dibujar todos los despawn points
+        # Dibujar despawn points: círculo blanco exterior y negro interior
         for px, py in despawn_pts:
             pygame.draw.circle(screen, (255,255,255), (px,py), 10)
             pygame.draw.circle(screen, (0,0,0),       (px,py),  8)

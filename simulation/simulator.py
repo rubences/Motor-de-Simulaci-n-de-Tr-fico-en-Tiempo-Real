@@ -1,5 +1,3 @@
-# simulation/simulator.py
-
 import time
 import bisect
 import random
@@ -18,6 +16,9 @@ class Simulator:
         self.stats = {"lights_times": [], "vehicles_times": []}
         # Se inyecta desde main.py
         self.spawn_points = []
+        # Parámetros ajustables
+        self.stop_distance = 10.0
+        self.turn_threshold = 10.0
 
     def update_lights(self):
         t0 = time.perf_counter()
@@ -25,48 +26,54 @@ class Simulator:
             tl.update_state()
         self.stats["lights_times"].append(time.perf_counter() - t0)
 
-    def update_vehicles(self,
-                        stop_distance: float  = 10.0,
-                        turn_threshold: float = 10.0):
+    def update_vehicles(self):
         t0 = time.perf_counter()
         rows = self.city._rows
         cols = self.city._cols
 
-        # 1) Giro aleatorio en semáforo (E/W → posibilidad de seguir recto o girar)
+        # 1) Control de semáforo y giro aleatorio al llegar a intersección
         for v in list(self.city.vehicles):
             x, y = v.position
             for inter in self.city.intersections:
                 ix, iy = inter.pos
-                if abs(x - ix) <= turn_threshold and abs(y - iy) <= turn_threshold:
-                    if v.direction in ("ESTE", "OESTE"):
-                        # ahora puede seguir recto o girar Norte/Sur
-                        v.direction = random.choice((v.direction, "NORTE", "SUR"))
+                if abs(x - ix) <= self.turn_threshold and abs(y - iy) <= self.turn_threshold:
+                    state = inter.traffic_light.current_state
+                    # Solo girar o seguir si no está en rojo
+                    if state != "RED":
+                        if v.direction in ("ESTE", "OESTE"):
+                            v.direction = random.choice((v.direction, "NORTE", "SUR"))
+                        else:
+                            v.direction = random.choice((v.direction, "ESTE", "OESTE"))
+                    # Rompemos para no procesar múltiples intersecciones
                     break
 
-        # 2) Movimiento con control de semáforo y clamp a ventana
+        # 2) Movimiento con control de semáforo
         for v in list(self.city.vehicles):
             x, y = v.position
             allowed = True
 
+            # Horizontal (EASTE/OESTE)
             if v.direction in ("ESTE", "OESTE"):
                 lane = rows.get(y, [])
-                xs = [xi for xi, _ in lane]
+                xs = [coord for coord, _ in lane]
                 idx = (bisect.bisect_right(xs, x)
                        if v.direction == "ESTE"
                        else bisect.bisect_left(xs, x) - 1)
                 if 0 <= idx < len(xs):
                     ix, inter = lane[idx]
-                    if abs(ix - x) <= stop_distance and inter.traffic_light.current_state == "RED":
+                    # No avanzar si ROJO dentro de stop_distance
+                    if abs(ix - x) <= self.stop_distance and inter.traffic_light.current_state == "RED":
                         allowed = False
-            else:  # NORTE o SUR
+            # Vertical (NORTE/SUR)
+            else:
                 lane = cols.get(x, [])
-                ys = [yi for yi, _ in lane]
+                ys = [coord for coord, _ in lane]
                 idx = (bisect.bisect_right(ys, y)
                        if v.direction == "NORTE"
                        else bisect.bisect_left(ys, y) - 1)
                 if 0 <= idx < len(ys):
                     iy, inter = lane[idx]
-                    if abs(iy - y) <= stop_distance and inter.traffic_light.current_state == "RED":
+                    if abs(iy - y) <= self.stop_distance and inter.traffic_light.current_state == "RED":
                         allowed = False
 
             if allowed:
@@ -76,7 +83,7 @@ class Simulator:
                 ny = max(0, min(v.position[1], SCREEN_HEIGHT))
                 v.position = (nx, ny)
 
-        # 3) Despawn en los 4 spawn_points (círculos negros)
+        # 3) Despawn en los puntos negros
         despawn_thresh = 8
         to_remove = []
         for v in self.city.vehicles:
@@ -87,7 +94,6 @@ class Simulator:
                     break
         for v in to_remove:
             self.city.vehicles.remove(v)
-            print(f"[DEBUG] Se ha borrado {v.id_}")
 
         # 4) Registrar tiempo
         self.stats["vehicles_times"].append(time.perf_counter() - t0)

@@ -1,5 +1,3 @@
-# main.py
-
 import asyncio
 import random
 import math
@@ -14,16 +12,13 @@ from ui.gui import launch_gui
 
 async def spawn_loop(simulator, spawn_positions):
     """
-    - Solo spawnea en spawn_positions (2 puntos horizontales).
-    - Hasta 16 vehículos simultáneos.
-    - Separación mínima de 50 px entre spawns.
-    - Dirección inicial ESTE/OESTE hacia el centro.
-    - Intervalo dinámico vía simulator.spawn_interval.
+    - Hasta 16 vehículos.
+    - spawn_positions: 4 puntos, cada uno 50px dentro de los círculos negros.
+    - Separación mínima de 50px.
+    - Dirección inicial según el eje: E/W o N/S hacia el centro.
     """
     counter = 0
     spacing = 50
-
-    # Primer retardo
     await asyncio.sleep(simulator.spawn_interval)
 
     while True:
@@ -32,8 +27,17 @@ async def spawn_loop(simulator, spawn_positions):
                 if any(math.hypot(v.position[0]-px, v.position[1]-py) < spacing
                        for v in simulator.city.vehicles):
                     continue
+                # Decide dirección inicial según spawn_position
+                # Si spawn_positions x es variable → horizontal, si y variable → vertical
                 mid_x = (spawn_positions[0][0] + spawn_positions[1][0]) / 2
-                direction = "ESTE" if px < mid_x else "OESTE"
+                mid_y = (spawn_positions[2][1] + spawn_positions[3][1]) / 2
+                if px != px: pass  # dummy
+                # Si spawn es lateral:
+                if py == spawn_positions[0][1]:
+                    direction = "ESTE" if px < mid_x else "OESTE"
+                else:
+                    # spawn vertical arriba/abajo
+                    direction = "NORTE" if py < mid_y else "SUR"
                 v = Vehicle(
                     f"V{counter}",
                     position=(px, py),
@@ -43,45 +47,49 @@ async def spawn_loop(simulator, spawn_positions):
                 simulator.city.add_vehicle(v)
                 counter += 1
                 break
-
         await asyncio.sleep(simulator.spawn_interval)
 
 async def main():
-    # 1) Crear ciudad y definir carreteras
+    # 1) Ciudad y vías
     city = City("Ciudad Ejemplo")
-    # Horizontal
-    city.add_road(Road((50, 300), (750, 300)))
-    # Vertical izquierda y derecha
-    city.add_road(Road((300, 50), (300, 550)))
-    city.add_road(Road((500, 50), (500, 550)))
+    city.add_road(Road((50, 300), (750, 300)))    # horizontal
+    city.add_road(Road((300, 50), (300, 550)))    # vertical extendida
+    city.add_road(Road((500, 50), (500, 550)))    # vertical extendida
 
-    # 2) Semáforos en cruces centrales
     tl1 = TrafficLight("TL1"); i1 = Intersection((300, 300), tl1)
     city.add_intersection(i1); city.add_traffic_light(tl1)
     tl2 = TrafficLight("TL2"); i2 = Intersection((500, 300), tl2)
     city.add_intersection(i2); city.add_traffic_light(tl2)
 
-    # 3) Vehículos de prueba (opcional)
-    city.add_vehicle(Vehicle("V1", (100, 300), speed=2, direction="ESTE"))
-    city.add_vehicle(Vehicle("V2", (700, 300), speed=2, direction="OESTE"))
-
-    # 4) Instanciar simulador y parámetros dinámicos
+    # 2) Simulador
     simulator = Simulator(city)
-    # Despawn en 6 puntos (círculos negros)
+
+    # Despawn points (círculos negros) en 6 extremos (incluimos la carretera paralela)
     despawn_pts = [
-        (50, 300), (750, 300),    # extremos horizontales
-        (300, 50), (300, 550),    # extremos vertical izqda
-        (500, 50), (500, 550)     # extremos vertical drcha
+        (50, 300),  # inicio horizontal izquierda
+        (750, 300), # fin horizontal derecha
+        (300, 50),  # inicio vertical x=300 arriba
+        (300, 550), # fin vertical x=300 abajo
+        (500, 50),  # inicio vertical x=500 arriba
+        (500, 550)  # fin vertical x=500 abajo
     ]
     simulator.spawn_points = despawn_pts
 
-    # Spawn 50px dentro de los extremos horizontales
-    spawn_positions = [(50+50, 300), (750-50, 300)]
+    # Spawn positions 50px dentro de cada círculo negro
+    offset = 50
+    spawn_positions = [
+        (50  + offset, 300),     # horizontal izquierda
+        (750 - offset, 300),     # horizontal derecha
+        (300, 50  + offset),     # vertical x=300 arriba
+        (300, 550 - offset),     # vertical x=300 abajo
+        (500, 50  + offset),     # vertical x=500 arriba
+        (500, 550 - offset),     # vertical x=500 abajo
+    ]
 
-    simulator.spawn_interval = 0.5
+    simulator.spawn_interval = 0.5 
     simulator.default_speed  = 2.0
 
-    # 5) Tareas base de simulación
+    # 3) Tareas base
     sim_tasks = run_simulation_tasks(
         simulator,
         vehicle_interval=0.1,
@@ -89,13 +97,13 @@ async def main():
         metrics_interval=5.0
     )
 
-    # 6) Lanzar spawn_loop y GUI
+    # 4) Spawn y GUI
     spawn_task = asyncio.create_task(spawn_loop(simulator, spawn_positions))
     gui_task   = asyncio.create_task(launch_gui(simulator))
 
-    # 7) Tras cerrar la GUI, cancelar tareas
+    # 5) Al cerrar
     await gui_task
-    sim_tasks[2].cancel()  # métricas
+    sim_tasks[2].cancel()
     spawn_task.cancel()
     for t in sim_tasks:
         t.cancel()
