@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'coordinator'
+    static_configs:
+      - targets: ['coordinator:8000']
+
+  - job_name: 'vehicles'
+    static_configs:
+      - targets: ['vehicles:8000']
+
+  - job_name: 'semaphores'
+    static_configs:
+      - targets: ['semaphores:8000']
+
+  - job_name: 'sim_zona1'
+    static_configs:
+      - targets: ['simulator-zona1:8001']
+
+  # Añade más zonas según necesites…

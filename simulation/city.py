@@ -1,33 +1,46 @@
-# Archivo base: definición de City y Vehicle
-# (aquí está tu implementación actual, copiada íntegra)
+# simulation/city.py
 
-import asyncio
-import random
+class TrafficLight:
+    def __init__(self):
+        self.current_state = "GREEN"
+    def update_state(self):
+        # Alterna de forma trivial para demo
+        self.current_state = "RED" if self.current_state == "GREEN" else "GREEN"
 
 class Vehicle:
-    def __init__(self, id, posicion):
-        self.id = id
-        self.posicion = posicion  # (x, y)
+    def __init__(self, id_, position=(0,0), direction="ESTE"):
+        self.id_ = id_
+        self.position = position
+        self.direction = direction
+    def move(self):
+        # Movimiento sencillo: avanza +1 en x si va ESTE, -1 si va OESTE, etc.
+        x,y = self.position
+        if self.direction == "ESTE":
+            self.position = (x+1, y)
+        elif self.direction == "OESTE":
+            self.position = (x-1, y)
+        elif self.direction == "NORTE":
+            self.position = (x, y+1)
+        else:
+            self.position = (x, y-1)
 
-    def mover(self):
-        # lógica simple de movimiento (ejemplo)
-        dx, dy = random.choice([(1,0),(-1,0),(0,1),(0,-1)])
-        x, y = self.posicion
-        self.posicion = (x + dx, y + dy)
-
-class City:
-    def __init__(self, width=1000, height=1000):
-        self.width = width
-        self.height = height
-        self.vehicles = []
-
-    def add_vehicle(self, vehicle):
-        self.vehicles.append(vehicle)
-
-    async def simulate(self, steps=100, delay=0.1):
-        for _ in range(steps):
-            for v in self.vehicles:
-                v.mover()
-            await asyncio.sleep(delay)
-
-# Si tenías más código en este archivo, mantenlo aquí tal cual.
+class DistributedCity:
+    """
+    Stub de ciudad distribuida.
+    Genera unos semáforos y vehículos iniciales para demo.
+    """
+    def __init__(self, config_file: str, zone: str):
+        self.zone = zone
+        # Puntos de spawn/despawn
+        self.spawn_points = [(0,0), (799,599)]
+        # Definimos unos semáforos e intersecciones fijas
+        self.traffic_lights = [TrafficLight() for _ in range(4)]
+        self.intersections = []
+        # Un par de vehículos iniciales
+        self.vehicles = [Vehicle(f"v{i}", position=(i*10, i*10)) for i in range(5)]
+        # Mapa de filas y columnas para demo (vacío)
+        self._rows = {}
+        self._cols = {}
+        # Líneas de carretera (para get_snapshot_graphic)
+        self.roads = []
+        # Inicializamos el mapa de filas y columnas

@@ -1,0 +1,94 @@
+# docker-compose.yml
+services:
+  # ------------------------------------
+  # Broker de mensajería (RabbitMQ)
+  # ------------------------------------
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # UI web de RabbitMQ
+
+  # ------------------------------------
+  # Coordinator Service
+  # ------------------------------------
+  coordinator:
+    build:
+      context: ./services/coordinator_service
+    container_name: coordinator
+    ports:
+      - "5000:5000"  # FastAPI
+      - "8000:8000"  # /metrics
+    depends_on:
+      - rabbitmq
+
+  # ------------------------------------
+  # Vehicles Service
+  # ------------------------------------
+  vehicles:
+    build:
+      context: ./services/vehicles_service
+    container_name: vehicles
+    ports:
+      - "5001:5000"  # FastAPI
+      - "8001:8000"  # /metrics
+    depends_on:
+      - rabbitmq
+
+  # ------------------------------------
+  # Semaphores Service
+  # ------------------------------------
+  semaphores:
+    build:
+      context: ./services/semaphores_service
+    container_name: semaphores
+    ports:
+      - "5002:5000"  # FastAPI
+      - "8002:8000"  # /metrics
+    depends_on:
+      - rabbitmq
+
+  # ------------------------------------
+  # Simulator Nodo Zona1
+  # ------------------------------------
+  simulator-zona1:
+    build:
+      context: .
+      dockerfile: Dockerfile.simulator
+    container_name: simulator-zona1
+    command: ["python", "simulation/simulator.py", "--zone", "zona1"]
+    ports:
+      - "8003:8001"  # host:container para métricas
+    depends_on:
+      - rabbitmq
+
+  # ------------------------------------
+  # Prometheus
+  # ------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - coordinator
+      - vehicles
+      - semaphores
+      - simulator-zona1
+
+  # ------------------------------------
+  # Grafana
+  # ------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=changeme
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
