@@ -1,0 +1,18 @@
+# Dockerfile.simulator
+
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Instala solo las deps que necesite el simulador
+COPY requirements.simulator.txt .
+RUN pip install --no-cache-dir -r requirements.simulator.txt
+
+# Copia todo el código
+COPY . .
+
+# El simulador escucha métricas en el contenedor en el puerto 8001
+EXPOSE 8001
+
+# Arranca el script concretando la zona
+CMD ["python", "simulation/simulator.py", "--zone", "zona1"]

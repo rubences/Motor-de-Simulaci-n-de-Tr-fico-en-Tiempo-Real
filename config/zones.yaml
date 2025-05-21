@@ -1,0 +1,21 @@
+zones:
+  - name: norte
+    xmin: 0
+    xmax: 500
+    ymin: 0
+    ymax: 500
+  - name: sur
+    xmin: 0
+    xmax: 500
+    ymin: 500
+    ymax: 1000
+  - name: este
+    xmin: 500
+    xmax: 1000
+    ymin: 0
+    ymax: 500
+  - name: oeste
+    xmin: 500
+    xmax: 1000
+    ymin: 500
+    ymax: 1000
